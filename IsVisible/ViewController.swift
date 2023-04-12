@@ -9,19 +9,11 @@ import UIKit
 
 class ViewController: UIViewController {
 
-    // MARK: - Constants for testing
-
-    /// System under test
-    var sut: InspectableView { view1 }
-
-    /// A sufficient proportion of the visible part of the view for the view to be considered as shown
-    var intersectionTargetRatio: Double { 0.8 }
-
     // MARK: - Private Properties
 
     private lazy var scrollView: UIScrollView = {
         let scrollView = UIScrollView().toAutoLayout()
-        scrollView.backgroundColor = .systemBlue
+        scrollView.backgroundColor = .systemYellow
         scrollView.delegate = self
         return scrollView
     }()
@@ -32,9 +24,10 @@ class ViewController: UIViewController {
         return stackView
     }()
 
-    private let view1 = InspectableView(color: .red)
-    private let view2 = InspectableView(color: .green)
-    private let view3 = InspectableView(color: .blue)
+    private let view0 = InspectableView(color: .systemCyan, name: "Cyan").toAutoLayout()
+    private let view1 = InspectableView(color: .systemRed, name: "Red")
+    private let view2 = InspectableView(color: .systemGreen, name: "Green")
+    private let view3 = InspectableView(color: .blue, name: "Blue")
     private let view4 = ViewWithScroll()
 
     /// To prevent automatic triggering of the scrollViewDidScroll method at start
@@ -57,22 +50,8 @@ class ViewController: UIViewController {
 
     // MARK: - Private Methods
 
-    private func updateShowStatus() {
-        let sutFrameOnWindow = scrollView.convert(sut.frame, to: nil)
-        let sutArea = sut.frame.area // 90_000
-        let targetArea = Int(Double(sutArea) * intersectionTargetRatio)
-
-        let intersectionArea = keyWindow?.frame.intersection(sutFrameOnWindow).area ?? 0
-
-        // You can comment next 2 lines in order
-        // to print just the log of grey views show statuses
-        print("\n\(sut.name) intersectionArea:", intersectionArea) // max 90_000
-        print("\(sut.name) isShown:", intersectionArea > targetArea) // true from 72_000 (80%)
-
-        NotificationCenter.default.post(name: .needUpdateShowStatus, object: nil)
-    }
-
     private func setupLayout() {
+        view.addSubview(view0)
         view.addSubview(scrollView)
         scrollView.addSubview(stackView)
 
@@ -82,6 +61,9 @@ class ViewController: UIViewController {
         stackView.addArrangedSubview(view4)
 
         NSLayoutConstraint.activate([
+            view0.widthAnchor.constraint(equalToConstant: 250),
+            view0.heightAnchor.constraint(equalToConstant: 120),
+
             view1.widthAnchor.constraint(equalToConstant: 300),
             view1.heightAnchor.constraint(equalToConstant: 300),
 
@@ -94,7 +76,10 @@ class ViewController: UIViewController {
             view4.widthAnchor.constraint(equalToConstant: 300),
             view4.heightAnchor.constraint(equalToConstant: 300),
 
-            scrollView.topAnchor.constraint(equalTo: view.topAnchor),
+            view0.topAnchor.constraint(equalTo: view.topAnchor),
+            view0.leadingAnchor.constraint(equalTo: view.leadingAnchor),
+            view0.bottomAnchor.constraint(equalTo: scrollView.topAnchor),
+
             scrollView.bottomAnchor.constraint(equalTo: view.bottomAnchor),
             scrollView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
             scrollView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
@@ -114,6 +99,21 @@ extension ViewController: UIScrollViewDelegate {
 
     func scrollViewDidScroll(_ scrollView: UIScrollView) {
         guard isDidScrollMethodCallAllowed else { return }
-        updateShowStatus()
+        NotificationCenter.default.post(name: .screenAppearanceDidChange, object: nil)
     }
+}
+
+// MARK: - UIView + toAutoLayout
+
+public extension UIView {
+    func toAutoLayout() -> Self {
+        translatesAutoresizingMaskIntoConstraints = false
+        return self
+    }
+}
+
+// MARK: - Notification.Name
+
+public extension Notification.Name {
+    static let screenAppearanceDidChange = Notification.Name("ScreenAppearanceDidChange")
 }
